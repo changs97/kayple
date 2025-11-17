@@ -16,9 +16,6 @@ Flutter 개발자 채용 과제 전형
 ### NDK 버전 명시적 설정 
 Android 빌드를 위해 NDK 버전 `27.0.12077973`을 명시적으로 설정했습니다. 빌드 에러 시 참고 부탁드립니다.
 
-**설정 이유**:
-- Drift는 `sqlite3_flutter_libs` 패키지를 사용하여 네이티브 SQLite 라이브러리를 포함
-- Android 빌드 시 네이티브 라이브러리 컴파일을 위해 NDK 필요
 
 ### 아키텍처 설계
 - **Network DTO** → **Domain Entity** → **Local DB Model**을 각각 별도 클래스로 구성
