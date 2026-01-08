@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class PostItemAdapter extends StatelessWidget {
   final Post post;
   final VoidCallback onTap;
+  final VoidCallback? onBookmarkTap;
 
   const PostItemAdapter({
     super.key,
     required this.post,
     required this.onTap,
+    this.onBookmarkTap,
   });
 
   @override
@@ -64,6 +66,16 @@ class PostItemAdapter extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (onBookmarkTap != null)
+                  IconButton(
+                    icon: Icon(
+                      post.isBookmarked
+                          ? Icons.bookmark
+                          : Icons.bookmark_border,
+                      color: post.isBookmarked ? Colors.amber : null,
+                    ),
+                    onPressed: onBookmarkTap,
+                  ),
               ],
             ),
           ),

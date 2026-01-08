@@ -1,31 +1,14 @@
-class Post {
-  final int userId;
-  final int id;
-  final String title;
-  final String body;
-  final bool isBookmarked;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  Post({
-    required this.userId,
-    required this.id,
-    required this.title,
-    required this.body,
-    this.isBookmarked = false,
-  });
+part 'post.freezed.dart';
 
-  Post copyWith({
-    int? userId,
-    int? id,
-    String? title,
-    String? body,
-    bool? isBookmarked,
-  }) {
-    return Post(
-      userId: userId ?? this.userId,
-      id: id ?? this.id,
-      title: title ?? this.title,
-      body: body ?? this.body,
-      isBookmarked: isBookmarked ?? this.isBookmarked,
-    );
-  }
+@freezed
+class Post with _$Post {
+  const factory Post({
+    required int userId,
+    required int id,
+    required String title,
+    required String body,
+    @Default(false) bool isBookmarked,
+  }) = _Post;
 }

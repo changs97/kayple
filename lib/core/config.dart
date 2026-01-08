@@ -1,5 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 class Config {
   final String baseUrl;
 
@@ -8,9 +6,9 @@ class Config {
   });
 }
 
-final configProvider = Provider<Config>((ref) {
-  return const Config(
+class ConfigService {
+  static const Config instance = Config(
     baseUrl: 'https://jsonplaceholder.typicode.com',
   );
-});
+}
 

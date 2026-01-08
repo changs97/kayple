@@ -1,70 +1,121 @@
-import 'package:basic_project/data/providers/repository_providers.dart';
+import 'package:basic_project/data/storage/bookmark_storage.dart';
 import 'package:basic_project/domain/entities/post.dart';
 import 'package:basic_project/domain/repository/post_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:get/get.dart';
 
-final postDetailViewModelProvider =
-    StateNotifierProvider.family<PostDetailViewModel, PostDetailState, int>((
-      ref,
-      postId,
-    ) {
-      final repository = ref.watch(postRepositoryProvider);
-      return PostDetailViewModel(repository, postId);
-    });
+part 'post_detail_view_model.freezed.dart';
 
-class PostDetailState {
-  final Post? post;
-  final bool isLoading;
-  final Object? error;
+@freezed
+class PostDetailState with _$PostDetailState {
+  const factory PostDetailState({
+    Post? post,
+    @Default(false) bool isLoading,
+    Object? error,
+  }) = _PostDetailState;
 
-  PostDetailState({this.post, this.isLoading = false, this.error});
-
-  PostDetailState copyWith({Post? post, bool? isLoading, Object? error}) {
-    return PostDetailState(
-      post: post ?? this.post,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
-  }
+  factory PostDetailState.loading() => const PostDetailState(isLoading: true);
+  factory PostDetailState.success(Post post) => PostDetailState(post: post);
+  factory PostDetailState.error(Object err) => PostDetailState(error: err);
 }
 
-class PostDetailViewModel extends StateNotifier<PostDetailState> {
-  final PostRepository repository;
+class PostDetailViewModel extends GetxController {
+  PostRepository? _repository;
+  BookmarkStorage? _bookmarkStorage;
   final int postId;
 
-  PostDetailViewModel(this.repository, this.postId) : super(PostDetailState()) {
+  PostDetailViewModel(this.postId);
+
+  PostRepository get repository {
+    _repository ??= Get.find<PostRepository>();
+    return _repository!;
+  }
+
+  BookmarkStorage get bookmarkStorage {
+    _bookmarkStorage ??= Get.find<BookmarkStorage>();
+    return _bookmarkStorage!;
+  }
+
+  final _state = PostDetailState().obs;
+
+  PostDetailState get state => _state.value;
+
+  @override
+  void onInit() {
+    super.onInit();
     loadPostDetail();
+    
+    // BookmarkStorage 변경 감지하여 북마크 상태 동기화
+    ever(bookmarkStorage.bookmarkChangeCountRx, (_) {
+      if (!isClosed && _state.value.post != null) {
+        final isBookmarked = bookmarkStorage.isBookmarked(postId);
+        _state.value = _state.value.copyWith(
+          post: _state.value.post!.copyWith(isBookmarked: isBookmarked),
+        );
+      }
+    });
+  }
+
+  @override
+  void onClose() {
+    _repository = null;
+    _bookmarkStorage = null;
+    super.onClose();
   }
 
   Future<void> loadPostDetail() async {
-    state = state.copyWith(isLoading: true, error: null);
+    if (isClosed) return;
+    _state.value = PostDetailState.loading();
+    
     final result = await repository.getPostDetail(postId);
+    if (isClosed) return;
+    
     result.when(
       success: (post) {
-        state = state.copyWith(post: post, isLoading: false, error: null);
+        if (!isClosed) {
+          _state.value = PostDetailState.success(post);
+        }
       },
       failure: (error, stackTrace) {
-        state = state.copyWith(isLoading: false, error: error);
+        if (!isClosed) {
+          _state.value = PostDetailState.error(error);
+        }
       },
     );
   }
 
   Future<void> toggleBookmark() async {
-    final currentPost = state.post;
+    if (isClosed) return;
+    final currentPost = _state.value.post;
     if (currentPost == null) return;
+
+    final newBookmarkState = !currentPost.isBookmarked;
+    
+    // 낙관적 업데이트
+    if (!isClosed) {
+      _state.value = _state.value.copyWith(
+        post: currentPost.copyWith(isBookmarked: newBookmarkState),
+      );
+    }
 
     final result = await repository.toggleBookmark(
       currentPost.id,
-      currentPost.isBookmarked,
+      newBookmarkState,
     );
+    if (isClosed) return;
+    
     result.when(
       success: (_) {
-        state = state.copyWith(
-          post: currentPost.copyWith(isBookmarked: !currentPost.isBookmarked),
-        );
+        // BookmarkStorage 변경 감지로 자동 동기화됨
       },
       failure: (error, stackTrace) {
-        state = state.copyWith(error: error);
+        if (!isClosed) {
+          // 실패 시 롤백
+          _state.value = _state.value.copyWith(
+            post: currentPost.copyWith(isBookmarked: !newBookmarkState),
+          );
+          _state.value = PostDetailState.error(error);
+        }
       },
     );
   }

@@ -23,6 +23,6 @@ class PostDto {
   Map<String, dynamic> toJson() => _$PostDtoToJson(this);
 
   Post toEntity() {
-    return Post(userId: userId, id: id, title: title, body: body);
+    return Post(userId: userId, id: id, title: title, body: body, isBookmarked: false);
   }
 }
